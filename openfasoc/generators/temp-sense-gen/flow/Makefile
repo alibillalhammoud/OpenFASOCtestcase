@@ -100,20 +100,17 @@ versions.txt:
 	@klayout -zz -v >> $(abspath $@)
 
 # Pre-process Lefs
-# ==============================================================================
+# ============================================================================
+# Create special merged and generic lef if required.
+$(OBJECTS_DIR)/merged_spacing.lef: $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) $(ADD)
+	mkdir -p $(OBJECTS_DIR)
+	$(UTILS_DIR)/mergeLef.py --inputLef $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) --outputLef $@
 
-# Modify lef files for TritonRoute
-
-
-# Create special generic lef for TritonRoute if required.
 ifneq ($(GENERIC_TECH_LEF),)
 $(OBJECTS_DIR)/generic_merged_spacing.lef: $(GENERIC_TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS)
 	mkdir -p $(OBJECTS_DIR)
 	$(UTILS_DIR)/mergeLef.py --inputLef $(GENERIC_TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) --outputLef $@
 endif
-
-$(OBJECTS_DIR)/merged_spacing.lef: $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS)
-	python util/mergeLef.py --inputLef $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) --outputLef $(OBJECTS_DIR)/merged_spacing.lef
 
 # Pre-process libraries
 # ==============================================================================
@@ -393,64 +390,6 @@ klayout_guides: $(RESULTS_DIR)/5_route.def $(OBJECTS_DIR)/klayout.lyt
 	        -rm $(UTILS_DIR)/viewGuide.py
 
 
-# # Generate param file for TritonRoute
-# #-------------------------------------------------------------------------------
-# ifneq ($(GENERIC_TECH_LEF),)
-#   export TRITON_ROUTE_LEF := $(OBJECTS_DIR)/generic_merged_spacing.lef
-# else
-#   export TRITON_ROUTE_LEF := $(OBJECTS_DIR)/merged_spacing.lef
-# endif
-
-# $(OBJECTS_DIR)/TritonRoute.param: $(TRITON_ROUTE_LEF)
-# ifeq ($(USE_WXL),)
-# 	echo "guide:$(RESULTS_DIR)/route.guide" >> $@
-# endif
-# 	echo "outputguide:$(RESULTS_DIR)/output_guide.mod" >> $@
-# 	echo "outputDRC:$(REPORTS_DIR)/5_route_drc.rpt" >> $@
-# 	echo "outputMaze:$(RESULTS_DIR)/maze.log" >> $@
-# 	echo "threads:$(NUM_CORES)" >> $@
-# 	echo "cpxthreads:1" >> $@
-# 	echo "verbose:1" >> $@
-# 	echo "gap:0" >> $@
-# 	echo "timeout:2400" >> $@
-# ifneq ($(dbProcessNode),)
-# 	echo "dbProcessNode:$(dbProcessNode)" >> $@
-# endif
-
-# # Run TritonRoute
-# #-------------------------------------------------------------------------------
-# ifeq ($(USE_WXL),)
-# $(RESULTS_DIR)/5_route.def: $(RESULTS_DIR)/route.guide
-# # else
-# # $(RESULTS_DIR)/5_route.def: $(RESULTS_DIR)/4_cts.def
-# endif
-# $(RESULTS_DIR)/5_route.def: $(OBJECTS_DIR)/TritonRoute.param $(RESULTS_DIR)/4_cts.def
-# 	($(TIME_CMD) $(OPENROAD_CMD) $(SCRIPTS_DIR)/detail_route.tcl -metrics $(LOG_DIR)/5_2_TritonRoute.json) 2>&1 | tee $(LOG_DIR)/5_2_TritonRoute.log
-
-# $(RESULTS_DIR)/5_route.sdc: $(RESULTS_DIR)/4_cts.sdc
-# 	cp $< $@
-
-# clean_route:
-# 	rm -rf output*/ results*.out.dmp layer_*.mps
-# 	rm -rf *.gdid *.log *.met *.sav *.res.dmp
-# 	rm -rf $(RESULTS_DIR)/route.guide $(OBJECTS_DIR)/TritonRoute.param
-# 	rm -rf $(RESULTS_DIR)/5_route.def $(RESULTS_DIR)/5_route.sdc
-# 	rm -f  $(REPORTS_DIR)/5_*
-# 	rm -f  $(LOG_DIR)/5_*
-
-# klayout_tr_rpt: $(RESULTS_DIR)/5_route.def $(OBJECTS_DIR)/klayout.lyt
-# 	klayout -rd in_drc="$(REPORTS_DIR)/5_route_drc.rpt" \
-# 	        -rd in_def="$<" \
-# 	        -rd tech_file=$(OBJECTS_DIR)/klayout.lyt \
-# 	        -rm $(UTILS_DIR)/viewDrc.py
-
-# klayout_guides: $(RESULTS_DIR)/5_route.def
-# 	klayout -rd in_guide="$(RESULTS_DIR)/route.guide" \
-# 	        -rd in_def="$<" \
-# 	        -rd net_name=$(GUIDE_NET) \
-# 	        -rd tech_file=$(OBJECTS_DIR)/klayout.lyt \
-# 	        -rm $(UTILS_DIR)/viewGuide.py
-
 # ==============================================================================
 #  _____ ___ _   _ ___ ____  _   _ ___ _   _  ____
 # |  ___|_ _| \ | |_ _/ ___|| | | |_ _| \ | |/ ___|
@@ -458,11 +397,13 @@ klayout_guides: $(RESULTS_DIR)/5_route.def $(OBJECTS_DIR)/klayout.lyt
 # |  _|  | || |\  || | ___) |  _  || || |\  | |_| |
 # |_|   |___|_| \_|___|____/|_| |_|___|_| \_|\____|
 #
-finish: $(REPORTS_DIR)/6_final_report.rpt \
+finish: $(OBJECTS_DIR)/merged_spacing.lef \
+        $(REPORTS_DIR)/6_final_report.rpt \
         $(RESULTS_DIR)/6_final.v \
         $(RESULTS_DIR)/6_final.gds \
         $(RESULTS_DIR)/6_final.cdl
 # ==============================================================================
+
 
 ifneq ($(USE_FILL),)
 $(RESULTS_DIR)/6_1_fill.def: $(RESULTS_DIR)/5_route.def
