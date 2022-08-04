@@ -23,7 +23,7 @@ def generate_runs(
     flowDir = genDir + "flow/"
     platformConfig = jsonConfig["platforms"][platform]
     simTool = jsonConfig["simTool"]
-    model_file = jsonConfig["open_pdks"] + "/libs.tech/ngspice/sky130.lib.spice"
+    model_file = jsonConfig["open_pdks_GCP"] + "/libs.tech/ngspice/sky130.lib.spice"
 
     platformSpice = glob.glob(
         genDir + "../../common/platforms/%s/cdl/*.spice" % (platform)
@@ -35,7 +35,7 @@ def generate_runs(
         os.mkdir(simDir + "run/")
 
     # Update simulation testbench, depending on platform config and if running modeling
-    with open(simDir + "templates/tempsenseInst_%s.sp" % (simTool), "r") as rf:
+    with open(simDir + "templates/%s.sp" % (simTool), "r") as rf:
         simTestbench = rf.read()
         simTestbench = re.sub("@model_file", model_file, simTestbench)
         simTestbench = re.sub(
@@ -104,9 +104,7 @@ def generate_runs(
             w_file.write(wfdata)
             w_file.close()
 
-        run_simulations(
-            runDir, designName, tempList, jsonConfig["simTool"], jsonConfig["simMode"]
-        )
+        run_simulations(runDir, designName, tempList, jsonConfig["simTool"], jsonConfig["simMode"])
 
 
 def update_netlist(srcNetlist, dstNetlist, simMode) -> None:
@@ -206,7 +204,7 @@ def run_simulations(runDir, designName, temp_list, simTool, simMode) -> None:
                     % (designName, temp, designName, temp)
                 )
 
-        with open(runDir + "cal_result", "w") as wf:
+        with open(runDir + "all_result", "w") as wf:
             for temp in temp_list:
                 wf.write(
                     "python result.py --tool ngspice --inputFile %s_sim_%d.log\n"
